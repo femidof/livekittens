@@ -7,10 +7,6 @@ const svc = new RoomServiceClient(
   process.env.LIVEKIT_API_SECRET
 );
 
-type Data = {
-  response: string;
-};
-
 export default function getParticipant(
   req: NextApiRequest,
   res: NextApiResponse
