@@ -8,9 +8,10 @@ axios.get('/api/my-function')
     console.error(error);
   });
 
-  export default function Admin() {
-    return (
-      <>
+export default function Admin() {
+  return (
+    <>
 
-      </>
-)};
+    </>
+  )
+};
