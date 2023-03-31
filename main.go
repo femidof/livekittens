@@ -22,7 +22,10 @@ type EndpointRequest struct {
 }
 
 type EndpointResponse struct {
-	Token string `json:"token"`
+	Token      string `json:"token"`
+	Identity   string `json:"identity"`
+	CanPublish bool   `json:"can_publish"`
+	Room       string `json:"room"`
 }
 
 func generateToken(apiKey string, apiSecret string, room string, identity string, canPublish bool) (string, error) {
@@ -70,14 +73,14 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 	if error != nil {
 		log.Fatal(error)
 	}
-	response := EndpointResponse{Token: token}
+	response := EndpointResponse{Token: token, Identity: request.RoomName, CanPublish: canPub, Room: request.RoomName}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(response)
 }
 
 func main() {
 
-	err := godotenv.Load()
+	err := godotenv.Load(".env.local")
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
