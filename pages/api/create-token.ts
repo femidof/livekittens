@@ -25,6 +25,7 @@ export default function createToken(req: NextApiRequest, res: NextApiResponse) {
         process.env.LIVEKIT_API_SECRET,
         {
           identity: participantName,
+          name: participantName,
         }
       );
 
@@ -38,7 +39,6 @@ export default function createToken(req: NextApiRequest, res: NextApiResponse) {
       const token = at.toJwt();
       const result: TokenResult = {
         room: roomName,
-
         identity: participantName,
         canPublish: publishing,
         accessToken: token,
