@@ -17,7 +17,7 @@ var ApiSecret = ""
 
 type EndpointRequest struct {
 	RoomName        string `json:"roomName"`
-	ParticipantName string `json:"participant"`
+	ParticipantName string `json:"participantName"`
 	Publishing      bool   `json:"publishing,omitempty"`
 }
 
@@ -73,8 +73,9 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 	if error != nil {
 		log.Fatal(error)
 	}
-	response := EndpointResponse{Token: token, Identity: request.RoomName, CanPublish: canPub, Room: request.RoomName}
+	response := EndpointResponse{Token: token, Identity: request.ParticipantName, CanPublish: canPub, Room: request.RoomName}
 	w.Header().Set("Content-Type", "application/json")
+	fmt.Println(response)
 	json.NewEncoder(w).Encode(response)
 }
 
@@ -92,7 +93,7 @@ func main() {
 	http.HandleFunc("/token", tokenHandler)
 	fmt.Printf("Starting server at port 8082\n")
 
-	if err := http.ListenAndServe(":8082", nil); err != nil {
+	if err := http.ListenAndServe(":80", nil); err != nil {
 		log.Fatal(err)
 	}
 }
