@@ -28,6 +28,12 @@ type EndpointResponse struct {
 	Room       string `json:"room"`
 }
 
+func doPing(w http.ResponseWriter, r *http.Request) {
+	log.Println("On pong")
+
+	fmt.Fprintln(w, "pong EC2...")
+}
+
 func generateToken(apiKey string, apiSecret string, room string, identity string, canPublish bool) (string, error) {
 	at := auth.NewAccessToken(apiKey, apiSecret)
 	grant := &auth.VideoGrant{
@@ -81,7 +87,7 @@ func tokenHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 
-	err := godotenv.Load(".env")
+	err := godotenv.Load(".env.local")
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
@@ -91,9 +97,10 @@ func main() {
 	ApiSecret = os.Getenv("LIVEKIT_API_SECRET")
 
 	http.HandleFunc("/token", tokenHandler)
-	fmt.Printf("Starting server at port 8082\n")
+	http.HandleFunc("/ping", doPing)
+	fmt.Printf("Starting server at port 8080\n")
 
-	if err := http.ListenAndServe(":80", nil); err != nil {
+	if err := http.ListenAndServe(":8080", nil); err != nil {
 		log.Fatal(err)
 	}
 }
