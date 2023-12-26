@@ -1,7 +1,23 @@
+// Copyright 2023 LiveKit, Inc.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package auth
 
 import (
 	"strings"
+
+	"golang.org/x/exp/slices"
 
 	"github.com/livekit/protocol/livekit"
 )
@@ -23,7 +39,7 @@ type VideoGrant struct {
 	CanSubscribe   *bool `json:"canSubscribe,omitempty"`
 	CanPublishData *bool `json:"canPublishData,omitempty"`
 	// TrackSource types that a participant may publish.
-	// When set, it supercedes CanPublish. Only sources explicitly set here can be published
+	// When set, it supersedes CanPublish. Only sources explicitly set here can be published
 	CanPublishSources []string `json:"canPublishSources,omitempty"` // keys keep track of each source
 	// by default, a participant is not allowed to update its own metadata
 	CanUpdateOwnMetadata *bool `json:"canUpdateOwnMetadata,omitempty"`
@@ -35,6 +51,9 @@ type VideoGrant struct {
 	Hidden bool `json:"hidden,omitempty"`
 	// indicates to the room that current participant is a recorder
 	Recorder bool `json:"recorder,omitempty"`
+	// indicates that the holder can register as an Agent framework worker
+	// it is also set on all participants that are joining as Agent
+	Agent bool `json:"agent,omitempty"`
 }
 
 type ClaimGrants struct {
@@ -88,9 +107,12 @@ func (v *VideoGrant) GetCanPublish() bool {
 }
 
 func (v *VideoGrant) GetCanPublishSource(source livekit.TrackSource) bool {
+	if !v.GetCanPublish() {
+		return false
+	}
 	// don't differentiate between nil and unset, since that distinction doesn't survive serialization
 	if len(v.CanPublishSources) == 0 {
-		return v.GetCanPublish()
+		return true
 	}
 	sourceStr := sourceToString(source)
 	for _, s := range v.CanPublishSources {
@@ -99,6 +121,18 @@ func (v *VideoGrant) GetCanPublishSource(source livekit.TrackSource) bool {
 		}
 	}
 	return false
+}
+
+func (v *VideoGrant) GetCanPublishSources() []livekit.TrackSource {
+	if len(v.CanPublishSources) == 0 {
+		return nil
+	}
+
+	sources := make([]livekit.TrackSource, 0, len(v.CanPublishSources))
+	for _, s := range v.CanPublishSources {
+		sources = append(sources, sourceToProto(s))
+	}
+	return sources
 }
 
 func (v *VideoGrant) GetCanPublishData() bool {
@@ -122,19 +156,65 @@ func (v *VideoGrant) GetCanUpdateOwnMetadata() bool {
 	return *v.CanUpdateOwnMetadata
 }
 
+func (v *VideoGrant) MatchesPermission(permission *livekit.ParticipantPermission) bool {
+	if permission == nil {
+		return false
+	}
+
+	if v.GetCanPublish() != permission.CanPublish {
+		return false
+	}
+	if v.GetCanPublishData() != permission.CanPublishData {
+		return false
+	}
+	if v.GetCanSubscribe() != permission.CanSubscribe {
+		return false
+	}
+	if v.GetCanUpdateOwnMetadata() != permission.CanUpdateMetadata {
+		return false
+	}
+	if v.Hidden != permission.Hidden {
+		return false
+	}
+	if v.Recorder != permission.Recorder {
+		return false
+	}
+	if v.Agent != permission.Agent {
+		return false
+	}
+	if !slices.Equal(v.GetCanPublishSources(), permission.CanPublishSources) {
+		return false
+	}
+
+	return true
+}
+
+func (v *VideoGrant) UpdateFromPermission(permission *livekit.ParticipantPermission) {
+	if permission == nil {
+		return
+	}
+
+	v.SetCanPublish(permission.CanPublish)
+	v.SetCanPublishData(permission.CanPublishData)
+	v.SetCanPublishSources(permission.CanPublishSources)
+	v.SetCanSubscribe(permission.CanSubscribe)
+	v.SetCanUpdateOwnMetadata(permission.CanUpdateMetadata)
+	v.Hidden = permission.Hidden
+	v.Recorder = permission.Recorder
+	v.Agent = permission.Agent
+}
+
 func (v *VideoGrant) ToPermission() *livekit.ParticipantPermission {
 	pp := &livekit.ParticipantPermission{
-		CanPublish:     v.GetCanPublish(),
-		CanPublishData: v.GetCanPublishData(),
-		CanSubscribe:   v.GetCanSubscribe(),
-		Hidden:         v.Hidden,
-		Recorder:       v.Recorder,
+		CanPublish:        v.GetCanPublish(),
+		CanPublishData:    v.GetCanPublishData(),
+		CanSubscribe:      v.GetCanSubscribe(),
+		CanPublishSources: v.GetCanPublishSources(),
+		CanUpdateMetadata: v.GetCanUpdateOwnMetadata(),
+		Hidden:            v.Hidden,
+		Recorder:          v.Recorder,
+		Agent:             v.Agent,
 	}
-
-	for _, s := range v.CanPublishSources {
-		pp.CanPublishSources = append(pp.CanPublishSources, sourceToProto(s))
-	}
-
 	return pp
 }
 
