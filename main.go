@@ -31,7 +31,7 @@ type EndpointResponse struct {
 func doPing(w http.ResponseWriter, r *http.Request) {
 	log.Println("On pong")
 
-	fmt.Fprintln(w, "pong EC2...")
+	fmt.Fprintln(w, "pong")
 }
 
 func generateToken(apiKey string, apiSecret string, room string, identity string, canPublish bool) (string, error) {
